@@ -166,7 +166,7 @@
 ">
   <div style="color:white">
     <div style="font-weight:bold;font-size:0.95rem">🔊 تفعيل الصوت</div>
-    <div style="font-size:0.78rem;color:#aaa;margin-top:2px">اضغط لسماع ردود المساعد بالصوت</div>
+    <div style="font-size:0.78rem;color:#aaa;margin-top:2px">اضغط مرة واحدة فقط لسماع المساعد</div>
   </div>
   <button onclick="unlockAudio()" style="
     background: linear-gradient(135deg, #f0c040, #e0a020);
@@ -174,7 +174,7 @@
     padding: 12px 24px; border-radius: 100px;
     font-weight: bold; font-size: 0.95rem; cursor: pointer;
     white-space: nowrap;
-  ">تفعيل الصوت ▶</button>
+  ">تفعيل ▶</button>
 </div>
 
 <div class="menu-section">
@@ -260,9 +260,13 @@ function addToCartManual(id) {
 
 // ─── CART ─────────────────────────────────────────────────────
 function addToCartFromAI(name, qty = 1, note = '') {
-  const item = menuItems.find(i =>
-    i.name.includes(name) || name.includes(i.name.split(' ')[0])
-  );
+  const normalize = s => s.replace(/\s+/g, '').replace(/[اأإآ]/g, 'ا').replace(/[ةه]/g, 'ه');
+  const n = normalize(name);
+  const item = menuItems.find(i => {
+    const iName = normalize(i.name);
+    return iName.includes(n) || n.includes(iName) ||
+           iName.split('').filter(c => n.includes(c)).length > iName.length * 0.6;
+  });
   if (!item) return false;
   if (!cart[item.id]) cart[item.id] = { ...item, qty: 0, note: '' };
   cart[item.id].qty += qty;
@@ -455,19 +459,21 @@ function sendText() {
 let audioUnlocked = false;
 
 function unlockAudio() {
-  const ctx = new (window.AudioContext || window.webkitAudioContext)();
-  ctx.resume().then(() => {
-    audioUnlocked = true;
-    const banner = document.getElementById('audioBanner');
-    banner.style.background = 'linear-gradient(135deg, #1a6b3a, #27ae60)';
-    banner.innerHTML = `
-      <div style="color:white;display:flex;align-items:center;gap:10px;width:100%;justify-content:center">
-        <span style="font-size:1.2rem">✅</span>
-        <span style="font-weight:bold">الصوت مفعّل — المساعد سيتحدث معك</span>
-      </div>
-    `;
-    setTimeout(() => banner.style.display = 'none', 2000);
-  });
+  audioUnlocked = true;
+  sessionStorage.setItem('audioUnlocked', '1');
+  const banner = document.getElementById('audioBanner');
+  banner.style.background = 'linear-gradient(135deg, #1a6b3a, #27ae60)';
+  banner.innerHTML = `
+    <div style="color:white;display:flex;align-items:center;gap:10px;width:100%;justify-content:center">
+      <span style="font-size:1.2rem">✅</span>
+      <span style="font-weight:bold">الصوت مفعّل</span>
+    </div>
+  `;
+  setTimeout(() => {
+    banner.style.transition = 'opacity 0.5s';
+    banner.style.opacity = '0';
+    setTimeout(() => banner.style.display = 'none', 500);
+  }, 1500);
 }
 
 // ─── TEXT TO SPEECH (Browser - Free) ─────────────────────────
@@ -543,6 +549,12 @@ function stopVoice() {
 // ─── INIT ─────────────────────────────────────────────────────
 renderMenu();
 renderCart();
+
+// Hide banner if already unlocked in this session
+if (sessionStorage.getItem('audioUnlocked')) {
+  audioUnlocked = true;
+  document.getElementById('audioBanner').style.display = 'none';
+}
 </script>
 </body>
 </html>
