@@ -156,6 +156,27 @@
   <div class="api-status" id="apiStatus">أدخل المفتاح للبدء</div>
 </div>
 
+<!-- Audio Unlock Banner -->
+<div id="audioBanner" style="
+  position:fixed; bottom:0; left:0; right:0; z-index:999;
+  background: linear-gradient(135deg, #1a1a2e, #2d2d5e);
+  padding: 16px 20px;
+  display:flex; align-items:center; justify-content:space-between; gap:12px;
+  box-shadow: 0 -4px 20px rgba(0,0,0,0.3);
+">
+  <div style="color:white">
+    <div style="font-weight:bold;font-size:0.95rem">🔊 تفعيل الصوت</div>
+    <div style="font-size:0.78rem;color:#aaa;margin-top:2px">اضغط لسماع ردود المساعد بالصوت</div>
+  </div>
+  <button onclick="unlockAudio()" style="
+    background: linear-gradient(135deg, #f0c040, #e0a020);
+    color: #1a1a2e; border: none;
+    padding: 12px 24px; border-radius: 100px;
+    font-weight: bold; font-size: 0.95rem; cursor: pointer;
+    white-space: nowrap;
+  ">تفعيل الصوت ▶</button>
+</div>
+
 <div class="menu-section">
 
   <!-- MENU ITEMS -->
@@ -322,19 +343,18 @@ function buildMenuText() {
 function initChat() {
   chatHistory = [{
     role: 'system',
-    content: `أنت مساعد طلبات مطعم. تتحدث العربية فقط. 
+    content: `أنت مساعد طلبات مطعم ودود. تتحدث العربية فقط. ردودك قصيرة وطبيعية مثل النادل.
 القائمة المتاحة:
 ${buildMenuText()}
 
-مهمتك:
-1. افهم طلب الزبون من القائمة فقط
-2. لو طلب شيء مو بالقائمة قوله "عذراً هذا الصنف غير متوفر"
-3. بعد ما تفهم الطلب أكده مع الزبون
-4. لما يؤكد، أرجع رداً يحتوي على كلمة "تم_الطلب" متبوعة بالأصناف المطلوبة بهذا الشكل:
-   تم_الطلب: اسم_الصنف×الكمية، اسم_الصنف×الكمية
-   مثال: تم_الطلب: برغر كبير×2، كولا×1
-5. لو الزبون كلّم بشيء خارج الطلب، رد بجملة واحدة وارجع للموضوع
-6. ردودك قصيرة وودية`
+قواعد مهمة:
+1. ردودك قصيرة جداً لا تتجاوز جملتين
+2. لو سألك الزبون عن القائمة قل فقط الفئات باختصار مثل "عندنا برغر وبيتزا ودجاج ومشروبات وحلويات، شو يعجبك؟" بدون أسعار
+3. لو طلب صنف محدد اسأله عن الكمية فقط
+4. لو طلب شيء مو بالقائمة قل "ما عندنا هذا، شو غيره؟"
+5. بعد ما تفهم الطلب كاملاً أكده بجملة واحدة قصيرة
+6. لما يؤكد أرجع بهذا الشكل فقط: تم_الطلب: اسم_الصنف×الكمية، اسم_الصنف×الكمية
+7. لو الزبون حكى شيء خارج الطلب رد بجملة واحدة وارجع للموضوع`
   }];
 }
 
@@ -431,9 +451,28 @@ function sendText() {
   sendToAI(text);
 }
 
+// ─── AUDIO UNLOCK (Mobile) ────────────────────────────────────
+let audioUnlocked = false;
+
+function unlockAudio() {
+  const ctx = new (window.AudioContext || window.webkitAudioContext)();
+  ctx.resume().then(() => {
+    audioUnlocked = true;
+    const banner = document.getElementById('audioBanner');
+    banner.style.background = 'linear-gradient(135deg, #1a6b3a, #27ae60)';
+    banner.innerHTML = `
+      <div style="color:white;display:flex;align-items:center;gap:10px;width:100%;justify-content:center">
+        <span style="font-size:1.2rem">✅</span>
+        <span style="font-weight:bold">الصوت مفعّل — المساعد سيتحدث معك</span>
+      </div>
+    `;
+    setTimeout(() => banner.style.display = 'none', 2000);
+  });
+}
+
 // ─── TEXT TO SPEECH (Browser - Free) ─────────────────────────
 function speakText(text) {
-  if (!window.speechSynthesis || !text.trim()) return;
+  if (!window.speechSynthesis || !text.trim() || !audioUnlocked) return;
   window.speechSynthesis.cancel();
 
   const utter = new SpeechSynthesisUtterance(text);
